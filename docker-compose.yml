@@ -1,0 +1,83 @@
+# Services: defines the containers that run together. Each key is a separate container
+# Services and their ports:
+# postgres
+# - 5432:5432
+# redis
+# - 6379:6379
+# api
+# - 8000:8000
+# worker
+# beat
+# flower
+# - 5555:5555
+
+
+services:
+  postgres:
+    image: postgres:16-alpine # use official postgresql on alpine, which is a small image
+    environment: # create username, password and database type
+      POSTGRES_USER: sushi
+      POSTGRES_PASSWORD: sushi
+      POSTGRES_DB: sushidb
+    ports: # use default port
+      - "5432:5432"
+    healthcheck: # run every 5 seconds to check readiness
+      test: ["CMD-SHELL", "pg_isready -U sushi -d sushidb"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck: # verify redis is responding
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+
+  api:
+    build: . # build image from the dockerfile in the current directory
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload # override cmd: run uvicorn with --reload for development
+    ports:
+      - "8000:8000"
+    env_file: .env # load variables from .env
+    environment: # set environment variables. postgres and redis are service names (hostnames)
+      DATABASE_URL: postgresql+asyncpg://sushi:sushi@postgres:5432/sushidb
+      REDIS_URL: redis://redis:6379/0
+    depends_on: # start only after postgres and redis are healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    # concurrency: run up to 4 tasks in parallel
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=4 # run celery worker for app.tasts.celery_app
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sushi:sushi@postgres:5432/sushidb
+      REDIS_URL: redis://redis:6379/0
+    depends_on: # start after redis and postgres. This worker get tasks from redis and updates postgres
+      - redis
+      - postgres
+
+  beat:
+    build: .
+    command: celery -A app.tasks.celery_app beat --loglevel=info # run celery beat (preiodic task scheduler)
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on: # start after redis
+      - redis
+
+  flower:
+    build: .
+    command: celery -A app.tasks.celery_app flower --port=5555 # run flower (celery monitoring UI)
+    ports:
+      - "5555:5555"
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on: # start after redis
+      - redis
