@@ -20,7 +20,7 @@ services:
       POSTGRES_PASSWORD: sushi
       POSTGRES_DB: sushidb
     ports: # use default port
-      - "5432:5432"
+      - "5433:5432"
     healthcheck: # run every 5 seconds to check readiness
       test: ["CMD-SHELL", "pg_isready -U sushi -d sushidb"]
       interval: 5s
