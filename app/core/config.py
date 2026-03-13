@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Load variables from .env automatically
     # Ignore extra env variables not defined in the model
-    model_confg = {
+    model_config = {
         "env_file": ".env",
         "extra": "ignore"
     }
