@@ -11,6 +11,7 @@ from app.core.database import Base
 from app.models import User
 from app.models import MenuItem
 from app.models import Order
+from app.models import OrderItem
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
