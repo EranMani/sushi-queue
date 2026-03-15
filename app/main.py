@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
+from app.api.routes import auth
+
 """
 VISUAL EXPLANATION: The Restaurant's Daily Routine
 ------------------------------------------------
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
 
 # Create a FastAPI app
 app = FastAPI(title="Sushi Queue", description="Async sushi order backend", lifespan=lifespan)
+app.include_router(auth.router, prefix="/api")
 
 @app.get("/")
 def root():
