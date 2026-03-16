@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from app.api.routes import auth
+from app.api.routes import auth, menu
+from app.core.redis import get_redis, close_redis
 
 """
 VISUAL EXPLANATION: The Restaurant's Daily Routine
@@ -20,7 +21,7 @@ async def lifespan(app: FastAPI):
     # --- MORNING PREP (Before yield) ---
     # Staff arrives, turns on ovens, and preps the kitchen.
     # Code here runs ONCE at startup: connect to DB, Redis, or warm up caches.
-    print("Turning on the ovens... (Starting connections)")
+    await get_redis()
     
     # --- OPEN FOR BUSINESS (The yield) ---
     # The 'yield' is the pause button. We flip the sign to "OPEN".
@@ -30,11 +31,12 @@ async def lifespan(app: FastAPI):
     # --- CLOSING TIME (After yield) ---
     # The server is shutting down. The yield unpauses.
     # Staff turn off ovens and lock doors: safely disconnect from DB/Redis.
-    print("Locking the doors... (Closing connections safely)")
+    await close_redis()
 
 # Create a FastAPI app
 app = FastAPI(title="Sushi Queue", description="Async sushi order backend", lifespan=lifespan)
 app.include_router(auth.router, prefix="/api")
+app.include_router(menu.router, prefix="/api")
 
 @app.get("/")
 def root():
