@@ -75,7 +75,7 @@ async def get_menu(db: AsyncSession = Depends(get_db)):
     data = [MenuItemPublic.model_validate(i).model_dump(mode="json") for i in items]
     
     # Pin the database items to the Redis whiteboard so the NEXT customer gets it instantly!
-    await redis.set(CACHE_KEY, CACHE_TTL, json.dumps(data, default=str))
+    await redis.set(name=CACHE_KEY, ex=CACHE_TTL, value=json.dumps(data, default=str))
     
     # Hand the freshly pulled menu to the current customer.
     return [MenuItemPublic.model_validate(i) for i in items]
